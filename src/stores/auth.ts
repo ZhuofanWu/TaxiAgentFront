@@ -91,6 +91,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
+    // 停掉司机位置的心跳定时器：否则退出登录后它仍会拿着已失效的 token 继续上报。
+    // 用动态 import 避开 auth → driverLocation → api/order → utils/request → auth 的模块循环。
+    const { useDriverLocationStore } = await import('./driverLocation')
+    useDriverLocationStore().stopHeartbeat()
     try {
       await logoutApi()
     } catch {

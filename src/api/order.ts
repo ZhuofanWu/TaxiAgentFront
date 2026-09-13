@@ -4,6 +4,8 @@ import type {
   DriverAcceptPayload,
   DriverArrivePayload,
   DriverFinishPayload,
+  DriverLocationPayload,
+  DriverOnlineStatus,
   DriverOrderPoolItem,
   DriverOrderPoolQuery,
   CancelOrderPayload,
@@ -66,6 +68,18 @@ export async function finishDriverOrder(payload: DriverFinishPayload): Promise<O
 
 export async function getDriverCurrentOrder(): Promise<RideOrderDetail | null> {
   return request.get('/order/driver/current')
+}
+
+export async function reportDriverLocation(payload: DriverLocationPayload): Promise<boolean> {
+  return request.post('/order/driver/location', payload)
+}
+
+export async function setDriverOffline(): Promise<boolean> {
+  return request.post('/order/driver/offline')
+}
+
+export async function getDriverLocation(): Promise<DriverOnlineStatus> {
+  return request.get('/order/driver/location')
 }
 
 export async function payOrder(orderId: string, payload: PayOrderPayload): Promise<boolean> {

@@ -208,6 +208,12 @@ const router = createRouter({
           meta: { title: '我的工单' },
         },
         {
+          path: 'location',
+          name: 'driver-location',
+          component: () => import('../views/driver/DriverLocationView.vue'),
+          meta: { title: '当前位置' },
+        },
+        {
           path: 'tickets/:id',
           name: 'driver-ticket-detail',
           component: () => import('../views/driver/TicketDetailView.vue'),

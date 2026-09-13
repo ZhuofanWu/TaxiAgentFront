@@ -2,7 +2,7 @@
 import { computed, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NLayout, NLayoutSider, NMenu, NIcon, NAvatar, NDropdown, useMessage } from 'naive-ui'
-import { HomeOutline, TicketOutline, CartOutline } from '@vicons/ionicons5'
+import { HomeOutline, TicketOutline, CartOutline, LocationOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -39,6 +39,11 @@ const menuOptions = [
         key: '/driver/orders/detail',
       },
     ],
+  },
+  {
+    label: '当前位置',
+    key: '/driver/location',
+    icon: () => h(NIcon, null, { default: () => h(LocationOutline) }),
   },
   {
     label: '工单与投诉',

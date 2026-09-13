@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NButton, NEmpty, NPagination, NSpin, NText, useDialog, useMessage } from 'naive-ui'
 import DriverOrderPoolCard from '@/components/business/order/DriverOrderPoolCard.vue'
 import { acceptDriverOrder, getDriverOrderPoolPage } from '@/api/order'
+import { useDriverLocationStore } from '@/stores/driverLocation'
 import type { DriverOrderPoolItem } from '@/types/order'
 
 const router = useRouter()
 const dialog = useDialog()
 const message = useMessage()
+const driverLocation = useDriverLocationStore()
 
 const loading = ref(false)
 const errorMessage = ref<string | null>(null)
@@ -17,9 +19,18 @@ const page = ref(1)
 const size = ref(8)
 const total = ref(0)
 
-onMounted(() => {
-  fetchOrders()
+// 后端在司机未上线时直接返回空池，这里据此把"附近确实没单"与"没上线"两种情况区分开
+const showOfflineHint = computed(() => !driverLocation.online)
+
+onMounted(async () => {
+  await syncLocation()
+  await fetchOrders()
 })
+
+/** 同步司机在线状态：可能是在「当前位置」页开过上线，也可能是刷新后恢复 */
+async function syncLocation() {
+  await driverLocation.syncStatus()
+}
 
 async function fetchOrders() {
   loading.value = true
@@ -30,6 +41,7 @@ async function fetchOrders() {
     total.value = result.total
   } catch (error) {
     orders.value = []
+    total.value = 0
     errorMessage.value = error instanceof Error ? error.message : '加载订单池失败'
   } finally {
     loading.value = false
@@ -37,6 +49,7 @@ async function fetchOrders() {
 }
 
 async function handleRefresh() {
+  await syncLocation()
   await fetchOrders()
   if (!errorMessage.value) message.success('已刷新')
 }
@@ -44,6 +57,10 @@ async function handleRefresh() {
 function handlePageChange(nextPage: number) {
   page.value = nextPage
   fetchOrders()
+}
+
+function goToLocation() {
+  router.push('/driver/location')
 }
 
 function handleClaim(order: DriverOrderPoolItem) {
@@ -57,9 +74,10 @@ function handleClaim(order: DriverOrderPoolItem) {
 }
 
 async function claimOrder(order: DriverOrderPoolItem): Promise<boolean | void> {
-  const location = await resolveCurrentLocation()
+  // 用司机在「当前位置」页设置好并已上报的坐标，不再每次现取浏览器定位
+  const location = driverLocation.location
   if (!location) {
-    message.error('无法获取定位信息，请开启定位后重试')
+    message.error('尚未设置当前位置，请先到「当前位置」页设置并上线')
     return false
   }
   try {
@@ -69,30 +87,11 @@ async function claimOrder(order: DriverOrderPoolItem): Promise<boolean | void> {
       currentLng: location.lng,
     })
     message.success('认领成功')
-    await fetchOrders()
     router.push('/driver/orders/current')
   } catch (error) {
     message.error(error instanceof Error ? error.message : '认领失败')
     return false
   }
-}
-
-function resolveCurrentLocation(): Promise<{ lat: number; lng: number } | null> {
-  if (!navigator.geolocation) {
-    return Promise.resolve(null)
-  }
-  return new Promise((resolve) => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        })
-      },
-      () => resolve(null),
-      { enableHighAccuracy: true, timeout: 8000 },
-    )
-  })
 }
 </script>
 
@@ -100,8 +99,8 @@ function resolveCurrentLocation(): Promise<{ lat: number; lng: number } | null> 
   <div class="order-pool-page">
     <div class="page-header">
       <div>
-        <div class="page-title">订单池</div>
-        <NText depth="3">等待接单的订单，共 {{ total }} 单</NText>
+        <div class="page-title">附近订单</div>
+        <NText depth="3">离您最近的订单优先，共 {{ total }} 单</NText>
       </div>
       <div class="header-actions">
         <NButton size="small" secondary @click="handleRefresh">刷新</NButton>
@@ -121,9 +120,14 @@ function resolveCurrentLocation(): Promise<{ lat: number; lng: number } | null> 
           @claim="handleClaim"
         />
         <div v-if="!loading && orders.length === 0" class="empty-state">
-          <NEmpty description="暂无可认领订单">
+          <NEmpty
+            :description="showOfflineHint ? '请先上线后再查看附近订单' : '附近暂无可认领订单'"
+          >
             <template #extra>
-              <NButton type="primary" secondary @click="handleRefresh">刷新看看</NButton>
+              <NButton v-if="showOfflineHint" type="primary" secondary @click="goToLocation">
+                去上线
+              </NButton>
+              <NButton v-else type="primary" secondary @click="handleRefresh">刷新看看</NButton>
             </template>
           </NEmpty>
         </div>

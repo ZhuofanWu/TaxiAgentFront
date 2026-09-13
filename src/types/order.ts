@@ -102,6 +102,8 @@ export interface DriverOrderPoolItem {
   estDistance?: number | string | null
   estPrice?: number | string | null
   createTime?: string | null
+  /** 距司机的直线距离（公里），由后端地理池的 GEOSEARCH 填充 */
+  distanceKm?: number | string | null
 }
 
 export interface OrderPoolPageResult<T> {
@@ -137,6 +139,17 @@ export interface DriverAcceptPayload {
   orderId: string
   currentLat: number
   currentLng: number
+}
+
+export interface DriverLocationPayload {
+  lng: number
+  lat: number
+}
+
+export interface DriverOnlineStatus {
+  online: boolean
+  lng?: number | null
+  lat?: number | null
 }
 
 export interface DriverArrivePayload {

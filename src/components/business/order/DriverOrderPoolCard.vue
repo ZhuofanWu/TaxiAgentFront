@@ -8,6 +8,9 @@ const emit = defineEmits<{ (event: 'claim', order: DriverOrderPoolItem): void }>
 
 const distanceText = computed(() => formatDistance(props.order.estDistance))
 const priceText = computed(() => formatPrice(props.order.estPrice))
+// 距我 = 司机当前位置到上车点的直线距离（后端按此排序）；
+// 与"里程"（这一单要跑多远）不是一回事，两者都要给司机看
+const distanceToMeText = computed(() => formatDistance(props.order.distanceKm))
 
 function handleClick() {
   emit('claim', props.order)
@@ -53,6 +56,10 @@ function resolveNumber(value: number | string | null | undefined): number | null
       </div>
     </div>
     <div class="metrics">
+      <div class="metric">
+        <span class="metric-label">距我</span>
+        <span class="metric-value metric-highlight">{{ distanceToMeText }}</span>
+      </div>
       <div class="metric">
         <span class="metric-label">里程</span>
         <span class="metric-value">{{ distanceText }}</span>
@@ -129,7 +136,7 @@ function resolveNumber(value: number | string | null | undefined): number | null
 .metrics {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
   gap: 12px;
   align-items: center;
 }
@@ -149,6 +156,11 @@ function resolveNumber(value: number | string | null | undefined): number | null
   font-size: 1rem;
   font-weight: 600;
   color: #0f172a;
+}
+
+/* 排序依据，视觉上比其他指标更突出 */
+.metric-highlight {
+  color: #2563eb;
 }
 
 .action-tip {
